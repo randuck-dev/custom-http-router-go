@@ -1,10 +1,11 @@
-package api
+package router
 
 import (
 	"context"
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 )
 
 type routerHandler struct {
@@ -15,15 +16,14 @@ type routerHandler struct {
 type middleware func(http.Handler) http.Handler
 
 type Router struct {
-	executor    *Executor
 	handlers    map[string]routerHandler
 	middlewares []middleware
 }
 
-func NewRouter(executor *Executor) Router {
+func NewRouter() Router {
 	return Router{
-		executor: executor,
-		handlers: make(map[string]routerHandler),
+		handlers:    make(map[string]routerHandler),
+		middlewares: []middleware{},
 	}
 }
 

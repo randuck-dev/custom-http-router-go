@@ -10,6 +10,7 @@ import (
 	"time"
 
 	api "github.com/randuck-dev/rd-api/pkg"
+	"github.com/randuck-dev/rd-api/pkg/router"
 )
 
 func main() {
@@ -38,28 +39,23 @@ func customRouter() {
 
 	healthzApi := api.NewHealthzApi(db)
 
-	executor := api.Executor{
-		Name: "AGGRESSOR",
-	}
+	r := router.NewRouter()
 
-	router := api.NewRouter(&executor)
+	r.Middleware(router.RequestDuration)
 
-	router.Middleware(api.RequestDuration)
-
-	router.Handler("/customer", ca)
-	router.Handler("/order", oa)
-	router.Handler("/healthz", healthzApi)
+	r.Handler("/customer", ca)
+	r.Handler("/order", oa)
+	r.Handler("/healthz", healthzApi)
 
 	server := &http.Server{
 		Addr: ":9092",
 		BaseContext: func(l net.Listener) context.Context {
 			ctx := context.Background()
-			ctx = api.NewExecutorContext(ctx, &executor)
 			ctx = api.WithDbContext(ctx, db)
 			return ctx
 		},
 
-		Handler: &router,
+		Handler: &r,
 	}
 
 	// go dbStats(db)
