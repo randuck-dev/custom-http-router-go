@@ -9,16 +9,18 @@ import (
 func okJsonResponse(w http.ResponseWriter, payload []byte) {
 	w.Header().Add("Content-Type", "application/json")
 
-	slog.Info("Sending payload", "content-length", len(payload))
-	w.Write(payload)
+	slog.Debug("Sending payload", "content-length", len(payload))
+	if _, err := w.Write(payload); err != nil {
+		slog.Error("Unable to write response", "error", err)
+	}
 }
 
 func errorResponse(w http.ResponseWriter) {
 	w.WriteHeader(http.StatusBadRequest)
 
 	errResponse := Error{
-		errorMsg:  "<<< TODO >>>",
-		errorCode: http.StatusBadRequest,
+		ErrorMsg:  "<<< TODO >>>",
+		ErrorCode: http.StatusBadRequest,
 	}
 
 	serialized, err := json.Marshal(errResponse)
@@ -35,6 +37,6 @@ func internalServerError(w http.ResponseWriter) {
 }
 
 type Error struct {
-	errorMsg  string `json:"error"`
-	errorCode uint32 `json:"errorCode"`
+	ErrorMsg  string `json:"error"`
+	ErrorCode uint32 `json:"errorCode"`
 }

@@ -7,15 +7,20 @@ import (
 	"strings"
 )
 
+type routerHandler struct {
+	pattern string
+	handler http.Handler
+}
+
 type Router struct {
 	executor *Executor
-	handlers map[string]http.Handler
+	handlers map[string]routerHandler
 }
 
 func NewRouter(executor *Executor) Router {
 	return Router{
 		executor: executor,
-		handlers: make(map[string]http.Handler),
+		handlers: make(map[string]routerHandler),
 	}
 }
 
@@ -30,15 +35,24 @@ func (router *Router) Handler(path string, handler http.Handler) {
 		panic("Handler already registered")
 	}
 
-	router.handlers[path] = handler
+	router.handlers[path] = routerHandler{
+		pattern: path,
+		handler: handler,
+	}
 }
 
 func (router *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	slog.Debug("Received request", "path", r.URL.Path)
+	requestPath := r.URL.Path
 
-	for path, handler := range router.handlers {
-		if strings.HasPrefix(r.URL.Path, path) {
-			handler.ServeHTTP(w, r)
+	// Might be lucky and have an exact match
+	if rh, ok := router.handlers[requestPath]; ok {
+		rh.handler.ServeHTTP(w, r)
+		return
+	}
+
+	for prefix, rh := range router.handlers {
+		if strings.HasPrefix(requestPath, prefix) {
+			rh.handler.ServeHTTP(w, r)
 		}
 	}
 }

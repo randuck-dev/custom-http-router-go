@@ -7,6 +7,7 @@ import (
 )
 
 type Customer struct {
+	ID   uint64 `json:"id"`
 	Name string `json:"name"`
 	Age  uint8  `json:"age"`
 }
@@ -48,22 +49,22 @@ func (ca CustomerApi) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (ca CustomerApi) Get(w http.ResponseWriter, r *http.Request) {
 
-	e, ok := FromExecutorContext(r.Context())
+	e, ok := FromDbContext(r.Context())
 
 	if !ok {
 		internalServerError(w)
 		return
 	}
 
-	brokers := e.GetAvailableBrokers()
+	customer, err := getCustomer(e, "do")
 
-	slog.Info("Found some brokers", "brokers", brokers)
-
-	data := Customer{
-		Name: "TestUser",
-		Age:  12,
+	if err != nil {
+		slog.Error("Error retrieving customer", "err", err)
+		w.WriteHeader(http.StatusNotFound)
+		return
 	}
-	serialized, err := json.Marshal(data)
+
+	serialized, err := json.Marshal(customer)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

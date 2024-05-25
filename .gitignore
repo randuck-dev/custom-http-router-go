@@ -1,3 +1,13 @@
+
+### CUSTOM START
+*.db
+tmp
+
+
+### CUSTOM END
+
+### GENERATED
+
 .yarn
 .turbo
 .vscode
