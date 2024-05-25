@@ -16,14 +16,15 @@ func main() {
 	var routerType string
 	flag.StringVar(&routerType, "router", "custom", "router type")
 
-	if routerType == "custom" {
+	switch routerType {
+	case "custom":
 		customRouter()
-	}
-	if routerType == "standard" {
+	case "standard":
 		standardLibraryHttpHandler()
+	default:
+		panic("Invalid router type")
 	}
 
-	panic("Invalid router type")
 }
 
 // This spins up a simple custom router where handlers can be registered and the context can be extended
@@ -42,6 +43,8 @@ func customRouter() {
 	}
 
 	router := api.NewRouter(&executor)
+
+	router.Middleware(api.RequestDuration)
 
 	router.Handler("/customer", ca)
 	router.Handler("/order", oa)
@@ -91,5 +94,4 @@ func standardLibraryHttpHandler() {
 	if err != nil {
 		slog.Error("[http] Something happened", "err", err)
 	}
-
 }
