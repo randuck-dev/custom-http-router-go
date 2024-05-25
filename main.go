@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	api "github.com/randuck-dev/rd-api/pkg"
@@ -30,13 +33,11 @@ func main() {
 
 // This spins up a simple custom router where handlers can be registered and the context can be extended
 func customRouter() {
-
-	ca := api.CustomerApi{}
-	oa := api.OrderApi{}
-
 	db := api.NewCustomerDatabase()
 	defer db.Close()
 
+	ca := api.CustomerApi{}
+	oa := api.OrderApi{}
 	healthzApi := api.NewHealthzApi(db)
 
 	r := router.NewRouter()
@@ -58,24 +59,41 @@ func customRouter() {
 		Handler: &r,
 	}
 
-	// go dbStats(db)
+	go handleShutdown(server)
 
 	err := server.ListenAndServe()
+
 	if err != nil {
-		slog.Error("[CUSTOM_SERVER] Something happened", "err", err)
+
+		if err.Error() == "http: Server closed" {
+			slog.Info("[CUSTOM_SERVER] Server closed gracefully")
+		} else {
+			slog.Error("[CUSTOM_SERVER] Something happened", "err", err)
+		}
+	}
+}
+
+func handleShutdown(server *http.Server) {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT)
+
+	select {
+	case <-sig:
+		slog.Info("Received SIGTSTP")
+		err := server.Shutdown(context.Background())
+		if err != nil {
+			slog.Error("Error shutting down server", "err", err)
+		}
 	}
 }
 
 func dbStats(db *sql.DB) {
-	// every 5 seconds, show the stats for the database
-
 	for {
 		stats := db.Stats()
 
 		slog.Info("DB Stats", "stats", stats)
 		time.Sleep(5 * time.Second)
 	}
-
 }
 
 func standardLibraryHttpHandler() {
